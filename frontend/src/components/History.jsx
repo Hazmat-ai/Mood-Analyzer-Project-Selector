@@ -1,48 +1,8 @@
-import { useEffect, useState } from "react";
-import { fetchHistory } from "../api.js";
-
-export default function History({ onBack }) {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetchHistory()
-      .then(setItems)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
-
-  return (
-    <div className="pixel-panel">
-      <div className="section-heading">Your Project History</div>
-
-      {loading && <div className="loading-text">Loading...</div>}
-      {error && <div className="error-box">{error}</div>}
-
-      {!loading && items.length === 0 && (
-        <div className="loading-text">
-          No projects picked yet. Go spin the wheel!
-        </div>
-      )}
-
-      {!loading &&
-        items.map((item, i) => (
-          <div key={i} className="history-item">
-            <div className="history-title">{item.project_title}</div>
-            <div className="history-meta">
-              {item.specialty} • {item.difficulty} •{" "}
-              {new Date(item.timestamp).toLocaleDateString()}
-            </div>
-            {item.completed && (
-              <div className="history-completed">✓ Completed</div>
-            )}
-          </div>
-        ))}
-
-      <button className="pixel-button pixel-button-primary" onClick={onBack}>
-        Back
-      </button>
-    </div>
-  );
+import {useEffect,useState} from 'react';
+import {api,fetchHistory,download} from '../api';
+export default function History({onBack,onOpen,onDeleted}){
+ const [items,setItems]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[retry,setRetry]=useState(0),[busy,setBusy]=useState(false);
+ useEffect(()=>{const controller=new AbortController();setLoading(true);setError('');fetchHistory(controller.signal).then(data=>{if(!controller.signal.aborted)setItems(data);}).catch(e=>{if(!controller.signal.aborted)setError(e.message);}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});return()=>controller.abort();},[retry]);
+ async function action(run){if(busy)return;setBusy(true);setError('');try{await run();}catch(e){setError(e.message);}finally{setBusy(false);}}
+ return <section className="pixel-panel"><span className="eyebrow">YOUR BUILD COLLECTION</span><h2 tabIndex={-1}>Project history</h2><p className="muted">Your most recent 200 picks in this browser session. {items.filter(item=>item.completed).length} marked completed.</p>{loading&&<p role="status">Loading history…</p>}{error&&<div className="error-box" role="alert">{error}<button className="text-button" onClick={()=>setRetry(v=>v+1)}>Retry history</button></div>}{!loading&&!error&&!items.length&&<p>No projects yet. Choose your first build to start a collection.</p>}<div className="history-list">{items.map(item=><article className="history-item" key={item.id}><h3>{item.project_title}</h3><p className="history-meta">{item.specialty} · {item.difficulty} · {new Date(item.timestamp).toLocaleDateString()}</p>{item.completed&&<p className="history-completed">Completed ✓</p>}<button className="text-button" disabled={busy} onClick={()=>action(async()=>onOpen(await api(`/api/picks/${encodeURIComponent(item.id)}`)))}>Open build plan<span className="sr-only"> for {item.project_title}</span></button></article>)}</div><div className="button-row"><button className="pixel-button secondary" disabled={busy} onClick={()=>action(async()=>download('project-history.json',JSON.stringify(await api('/api/export'),null,2)))}>Export history</button><button className="pixel-button secondary" disabled={busy} onClick={()=>{if(window.confirm('Delete all project picks from this browser session?'))action(async()=>{await api('/api/history',{method:'DELETE'});setItems([]);});}}>Clear history</button></div><button className="text-button danger" disabled={busy} onClick={()=>{if(window.confirm('Delete this anonymous session and all its saved picks?'))action(async()=>{await api('/api/session',{method:'DELETE'});onDeleted();});}}>Delete session data</button><button className="pixel-button pixel-button-primary" onClick={onBack}>Back to projects</button></section>;
 }

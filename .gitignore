@@ -223,3 +223,13 @@ frontend/dist/
 
 # Analytics log (local data, not source code)
 analytics/activity_log.json
+# Runtime data, secrets and QA output
+.venv/
+data/
+backups/
+.env
+.env.*
+!.env.example
+analytics/activity_log.json
+frontend/test-results/
+frontend/playwright-report/

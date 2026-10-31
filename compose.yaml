@@ -1,0 +1,31 @@
+services:
+  app:
+    build: .
+    environment:
+      APP_ORIGIN: https://${APP_DOMAIN:?Set APP_DOMAIN}
+      PROXY_TOKEN: ${PROXY_TOKEN:?Generate a private 64-character hex token}
+    volumes:
+      - mood_data:/app/data
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  proxy:
+    image: caddy:2-alpine
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN}
+      PROXY_TOKEN: ${PROXY_TOKEN:?Set PROXY_TOKEN}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  mood_data:
+  caddy_data:
+  caddy_config:

@@ -1,22 +1,2 @@
-const DIFFICULTIES = [
-  { id: "easy", label: "Easy" },
-  { id: "medium", label: "Medium" },
-  { id: "hard", label: "Hard" },
-];
-
-export default function DifficultyPicker({ onSelect }) {
-  return (
-    <div className="pixel-panel">
-      <div className="section-heading">Pick a difficulty</div>
-      {DIFFICULTIES.map((d) => (
-        <button
-          key={d.id}
-          className="pixel-button"
-          onClick={() => onSelect(d.id)}
-        >
-          {d.label}
-        </button>
-      ))}
-    </div>
-  );
-}
+const levels=[['easy','Easy','A smaller scope and room for a quick win.'],['medium','Medium','A few connected pieces and some debugging.'],['hard','Hard','A deeper system to explore over multiple sessions.']];
+export default function DifficultyPicker({onSelect,onBack}){return <section className="pixel-panel"><span className="eyebrow">03 / SET YOUR PACE</span><h2 tabIndex={-1}>Choose a difficulty</h2><p className="muted">Difficulty filters the catalogue. Your quiz answers shape the match within it.</p>{levels.map(([id,label,description])=><button className="difficulty-card" key={id} onClick={()=>onSelect(id)}><strong>{label}</strong><span>{description}</span><span aria-hidden="true">→</span></button>)}<button className="pixel-button secondary" onClick={onBack}>Review quiz answers</button></section>;}

@@ -1,46 +1,29 @@
-export async function fetchSpecialties() {
-  const res = await fetch("/api/specialties");
-  if (!res.ok) throw new Error("Failed to load specialties");
-  return res.json();
+let csrf = '';
+let sessionRequest;
+const messages = {SESSION_REQUIRED:'Your browser session expired. Retry to reconnect.', CSRF_INVALID:'Your session needs to reconnect. Please retry.', RATE_LIMIT:'Too many requests. Wait a minute, then retry.', SESSION_RATE_LIMIT:'Please wait a minute before starting another session.', IDEMPOTENCY_CONFLICT:'This request changed. Start a new quiz.', PICK_NOT_FOUND:'That saved pick is unavailable.'};
+async function raw(path, options = {}) {
+  const timeout = AbortSignal.timeout(12000);
+  const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
+  let response;
+  try { response=await fetch(path,{...options,credentials:'same-origin',signal}); }
+  catch(error){ if(options.signal?.aborted) throw error; throw new Error('Could not reach the server. Check your connection and retry. Your previous selections are retained.'); }
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok){const error=new Error(messages[data.error]??`The request could not be completed (${response.status}). Please retry.`);error.status=response.status;throw error;}
+  return data;
 }
-
-export async function fetchQuiz() {
-  const res = await fetch("/api/quiz");
-  if (!res.ok) throw new Error("Failed to load quiz");
-  return res.json();
+export function initializeSession(){
+  if(!sessionRequest)sessionRequest=raw('/api/session').then(data=>{csrf=data.csrf_token;}).finally(()=>{sessionRequest=undefined;});
+  return sessionRequest;
 }
-
-export async function fetchHistory() {
-  const res = await fetch("/api/history");
-  if (!res.ok) throw new Error("Failed to load history");
-  return res.json();
+export async function api(path,{method='GET',body,key,signal}={}){
+  if(path!=='/api/specialties'&&path!=='/api/quiz')await initializeSession();
+  return raw(path,{method,signal,headers:{...(body?{'Content-Type':'application/json'}:{}),...(method!=='GET'?{'X-CSRF-Token':csrf}:{}),...(key?{'Idempotency-Key':key}:{})},body:body?JSON.stringify(body):undefined});
 }
-
-export async function markComplete({ projectId, projectTitle }) {
-  const res = await fetch("/api/complete", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, project_title: projectTitle }),
-  });
-  if (!res.ok) throw new Error("Failed to mark complete");
-  return res.json();
-}
-
-export async function submitQuiz({ specialty, answerIndexes, difficulty }) {
-  const res = await fetch("/api/submit-quiz", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      specialty,
-      answer_indexes: answerIndexes,
-      difficulty,
-    }),
-  });
-
-  if (!res.ok) {
-    const errBody = await res.json().catch(() => ({}));
-    throw new Error(errBody.error || "Failed to submit quiz");
-  }
-
-  return res.json();
+export const fetchSpecialties=(signal)=>api('/api/specialties',{signal});
+export const fetchQuiz=(signal)=>api('/api/quiz',{signal});
+export const fetchHistory=(signal)=>api('/api/history',{signal});
+export const markComplete=({pickId})=>api('/api/complete',{method:'POST',body:{pick_id:pickId}});
+export const submitQuiz=({specialty,answerIndexes,difficulty,key,signal})=>api('/api/submit-quiz',{method:'POST',body:{specialty,answer_indexes:answerIndexes,difficulty},key,signal});
+export function download(name, data, type='application/json'){
+ const url=URL.createObjectURL(new Blob([data],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }

@@ -1,64 +1,8 @@
-import { useState } from "react";
-import { markComplete } from "../api.js";
-
-export default function ProjectResult({ moodDescription, result, reason, onRestart }) {
-  const [completed, setCompleted] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  async function handleComplete() {
-    setSaving(true);
-    try {
-      await markComplete({ projectId: result.id, projectTitle: result.title });
-      setCompleted(true);
-    } catch (err) {
-      // non-critical, fail silently in UI but don't block the user
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="pixel-panel">
-      <div className="mood-summary">Your mood: {moodDescription}</div>
-      <div className="result-title">{result.title}</div>
-      <div className="result-description">{result.description}</div>
-      {reason && <div className="reason-text">{reason}</div>}
-
-      <div className="subheading">Tech Stack</div>
-      <div>
-        {result.tech_stack.map((t) => (
-          <span key={t} className="tech-tag">
-            {t}
-          </span>
-        ))}
-      </div>
-
-      <div className="subheading">Steps</div>
-      <ul className="step-list">
-        {result.steps.map((step, i) => (
-          <li key={i}>{step}</li>
-        ))}
-      </ul>
-
-      <div className="subheading">Stretch Goals</div>
-      <ul className="step-list">
-        {result.stretch_goals.map((goal, i) => (
-          <li key={i}>{goal}</li>
-        ))}
-      </ul>
-
-      <button
-        className="pixel-button"
-        onClick={handleComplete}
-        disabled={completed || saving}
-      >
-        {completed ? "Marked as completed!" : saving ? "Saving..." : "Mark as Completed"}
-      </button>
-
-      <button className="pixel-button pixel-button-primary" onClick={onRestart}>
-        Spin Again
-      </button>
-    </div>
-  );
+import {useRef,useState} from 'react';
+import {markComplete,download} from '../api';
+export default function ProjectResult({pickId,initiallyCompleted=false,moodDescription,result,reason,onRestart}){
+ const [completed,setCompleted]=useState(initiallyCompleted),[saving,setSaving]=useState(false),[error,setError]=useState('');const pending=useRef(false);
+ async function complete(){if(pending.current||completed)return;pending.current=true;setSaving(true);setError('');try{await markComplete({pickId});setCompleted(true);}catch(e){setError(e.message);}finally{pending.current=false;setSaving(false);}}
+ const exportPlan=()=>download('project-plan.md',`# ${result.title}\n\n${result.description}\n\n## Tech stack\n${result.tech_stack.join(', ')}\n\n## Build steps\n${result.steps.map((s,i)=>`${i+1}. ${s}`).join('\n')}\n\n## Stretch goals\n${result.stretch_goals.map(s=>`- ${s}`).join('\n')}`,'text/markdown');
+ return <section className="pixel-panel result-panel"><span className="eyebrow">YOUR NEXT BUILD</span><h2 tabIndex={-1}>{result.title}</h2><p className="result-description">{result.description}</p>{moodDescription&&<p className="mood-summary">Your preference profile: {moodDescription}</p>}{reason&&<p className="reason-text">{reason} The draw is weighted; the closest project isn’t guaranteed.</p>}<div className="tag-row"><span className="tech-tag">{result.difficulty}</span>{result.tech_stack.map(t=><span className="tech-tag" key={t}>{t}</span>)}</div>{result.plan_quality==='outline'&&<p className="content-note">Starter outline: these steps are a general framework. Adapt them to the project before you build.</p>}<h3>Build plan</h3><ol className="step-list">{result.steps.map((s,i)=><li key={i}>{s}</li>)}</ol><h3>Stretch goals</h3><ul className="step-list">{result.stretch_goals.map((s,i)=><li key={i}>{s}</li>)}</ul>{error&&<p className="error-box" role="alert">{error}</p>}<p role="status">{completed?'Completion saved to your history.':saving?'Saving completion…':''}</p><div className="button-row"><button className="pixel-button pixel-button-primary" disabled={saving||completed} onClick={complete}>{completed?'Completed ✓':saving?'Saving…':'Mark completed'}</button><button className="pixel-button secondary" onClick={exportPlan}>Download build plan</button></div><button className="pixel-button secondary" onClick={onRestart}>Choose another project</button></section>;
 }
