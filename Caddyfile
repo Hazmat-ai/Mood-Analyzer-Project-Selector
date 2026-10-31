@@ -1,0 +1,10 @@
+{$APP_DOMAIN} {
+  encode zstd gzip
+  request_body {
+    max_size 8KB
+  }
+  reverse_proxy app:5000 {
+    header_up X-Real-IP {remote_host}
+    header_up X-Mood-Proxy-Token {$PROXY_TOKEN}
+  }
+}

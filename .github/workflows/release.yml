@@ -1,0 +1,22 @@
+name: Release readiness
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest -q && pip-audit -r requirements.txt
+      - run: npm ci && npm run test:unit && npm run build && npm audit --audit-level=high && npx playwright install --with-deps chromium && npm run test:e2e
+        working-directory: frontend
+      - run: python scripts/release_check.py
+      - run: docker build -t mood-project-picker:release-candidate .

@@ -1,156 +1,59 @@
-# 🎮 Mood Project Picker
+# Mood Project Picker
 
-A mood-based coding project recommender. Answer a short quiz about how you're
-feeling, pick a specialty and difficulty, and get matched to a real project
-idea to build — picked using weighted vector similarity, not a random
-generator or hardcoded lookup table.
+A Flask + React project recommendation app. Choose a specialty, answer seven preference questions, pick a difficulty, and receive a project brief selected with weighted vector similarity. The interface keeps the retro purple/pink style with accessible native controls, back navigation, reduced-motion/skip support, visible recovery states and private project history.
 
-## Features
+The matching engine is pure Python, not a trained mood-detection model. It uses self-reported energy/creativity/challenge preferences and a weighted draw from nearby catalogue entries. It does not guarantee the closest project or scientifically measure a mental state. Generic build outlines are explicitly labelled.
 
-- 🧭 **Specialty selection** — Software, Cybersecurity, Data (Power BI/SQL), Azure/Cloud, or Game Development
-- 🧠 **Mood inference engine** — a 7-question quiz maps answers to a 3-axis mood vector (energy, creativity, challenge)
-- 🎯 **Weighted recommendation matching** — Euclidean distance between your mood and each project's ideal mood profile, filtered by difficulty
-- 🎡 **Animated roulette wheel** — eased spin animation with weighted randomness, so results feel intentional, not arbitrary
-- 📋 **Full project output** — description, tech stack, build steps, and stretch goals for every result
-- 📊 **History + analytics tracking** — logs every pick and completion locally, viewable in-app
-- 🎨 **Custom pixel-art theme** — pink/purple retro aesthetic built with a dedicated design system
+## Run locally
 
-## Technology Stack
-
-| Layer | Technology |
-|---|---|
-| Frontend | React 18 + Vite |
-| Styling | Custom CSS (pixel theme, no framework) |
-| Backend | Flask (Python) |
-| Matching Logic | Pure Python — vector math, no ML dependencies |
-| Data Storage | Local JSON file (analytics log) |
-| Fonts | Press Start 2P, VT323 |
-
-## How Mood Matching Works
+Requires Python 3.12 and Node.js 24:
 
 ```
-User answers 7 quiz questions
-        ↓
-Each answer nudges a mood axis (energy / creativity / challenge)
-        ↓
-Final mood vector, clamped to [-2, 2] per axis
-        ↓
-Filter project bank by specialty + difficulty
-        ↓
-Score every candidate: Euclidean distance to mood vector
-        ↓
-Weighted random selection (closer matches more likely, not guaranteed)
-        ↓
-Animated wheel settles on the backend-selected project
-        ↓
-Full project brief + one-line match reason displayed
-```
-
-This is intentionally **not** machine learning. With a 3-dimensional
-input space and a small, hand-tagged project bank, a weighted nearest-
-neighbor approach is the honest, explainable tool for the job — it's
-easy to reason about, doesn't require fabricated training data, and
-scales cleanly if more mood axes or projects are added later.
-
-## Project Bank
-
-275 total projects, 55 per specialty, each tagged with:
-- a difficulty (`easy` / `medium` / `hard`)
-- a mood-fit vector on the same 3 axes as the quiz
-- tech stack, build steps, and stretch goals
-
-A handful of projects per specialty currently have fully custom,
-hand-written steps and stretch goals; the rest use a generated
-template pending further content passes.
-
-## Installation
-
-```bash
-# Clone the project
-git clone <your-repo-url>
-cd mood-project-picker
-
-# --- Backend setup ---
-python -m venv venv
-venv\Scripts\activate        # Windows
-source venv/bin/activate     # Mac/Linux
-pip install flask
-
-# --- Frontend setup ---
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-dev.txt
 cd frontend
-npm install
-```
-
-## Running Locally
-
-Two terminals required — Flask serves the API, Vite serves the UI.
-
-**Terminal 1 (backend):**
-```bash
-venv\Scripts\activate
+npm ci
+npm run test:unit
+npm run build
+cd ..
 python app.py
 ```
-Runs on `http://127.0.0.1:5000`
 
-**Terminal 2 (frontend):**
-```bash
+Open http://localhost:5000. For development hot reload, also run `cd frontend && npm run dev` and use localhost:5173. Keep the virtual environment active for browser tests. Windows activation and production setup are covered in docs/DEPLOYMENT.md.
+
+## What changed
+
+- SQLite-backed private browser sessions replace shared JSON history in the web API.
+- Exact API schemas, strict quiz indexes, scoped project completion, CSRF/origin protection, secure production cookies, shared rate buckets and security headers.
+- Idempotent quiz submission makes retries safe after a lost response; concurrent retries create one pick.
+- Per-pick history, plan reopening, completion, Markdown plan download, JSON export and data deletion.
+- React loading/retry/cancellation recovery, answer review, focus handling, native radio controls and timer cleanup.
+- Locked dependencies, automated backend/matching/privacy tests, Playwright journey/accessibility checks, CI, Docker/Caddy TLS configuration, backup/cleanup scripts and human release gates.
+
+The catalogue contains 275 ideas (55 in each of five specialties). Many use generic build-plan outlines; the UI labels them rather than presenting them as individually authored tutorials. No GitHub starter link is fabricated. Project completion is self-reported.
+
+## Quality checks
+
+```
+python -m pytest -q
+pip-audit -r requirements.txt
 cd frontend
-npm run dev
-```
-Runs on `http://localhost:5173` — open this in your browser.
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/api/specialties` | List of available specialties |
-| GET | `/api/quiz` | The 7 quiz questions and options |
-| POST | `/api/submit-quiz` | Submit answers + difficulty, get a matched project |
-| GET | `/api/history` | Past picks with completion status |
-| POST | `/api/complete` | Mark a project as completed |
-
-## Limitations
-
-- Only 10 of 275 projects have fully custom build steps; the rest use generated template text
-- Analytics/history are stored in a local JSON file, not a real database — data doesn't persist across different machines or deployments
-- No user accounts — history is shared across anyone using the same local instance
-- Not yet deployed; runs locally only
-
-## Project Structure
-
-```
-mood-project-picker/
-├── app.py                    ← Flask entry point, all API routes
-├── main.py                   ← Original terminal-only test harness
-├── models/
-│   ├── mood_axes.py          ← Mood axis definitions + clamping
-│   ├── quiz_data.py          ← 7 quiz questions
-│   ├── specialty_data.py     ← Specialty list
-│   └── *_projects.py         ← 5 project banks (55 each)
-├── logic/
-│   ├── scoring.py            ← Quiz answers → mood vector
-│   └── matcher.py            ← Distance scoring + weighted wheel selection
-├── analytics/
-│   └── tracker.py            ← Pick/completion logging + history
-└── frontend/
-    └── src/
-        ├── App.jsx           ← Step machine orchestrating the flow
-        ├── api.js            ← Fetch helpers for the Flask API
-        ├── index.css         ← Pixel theme design system
-        └── components/
-            ├── SpecialtyPicker.jsx
-            ├── Quiz.jsx
-            ├── DifficultyPicker.jsx
-            ├── Wheel.jsx
-            ├── ProjectResult.jsx
-            └── History.jsx
+npm run test:unit
+npm run build
+npm audit --audit-level=high
+npx playwright install chromium
+npm run test:e2e
+cd ..
+python scripts/release_check.py
 ```
 
-## Future Improvements
+See docs/QA-RESULTS.md for checks actually performed while preparing this patch. Release is blocked until human UAT, content/security review, staging smoke tests and a restore drill have real evidence. A successful build cannot certify launch readiness.
 
-- [ ] Hand-write custom steps/stretch goals for the remaining ~265 projects
-- [ ] Deploy backend + frontend (e.g. Render + Vercel) for a live demo link
-- [ ] Move analytics from local JSON to a real database (SQLite/PostgreSQL)
-- [ ] User accounts so history isn't shared across a shared instance
-- [ ] Sound effects on the wheel spin
-- [ ] GitHub starter template links per project
+- [API contract](docs/API.md)
+- [Security and privacy](docs/SECURITY.md)
+- [Deployment and operations](docs/DEPLOYMENT.md)
+- [Human acceptance testing](docs/UAT.md)
+- [Patch application](docs/PATCH.md)
+
+History stores at most 200 project picks per anonymous 30-day browser session. No passwords or cross-device accounts are included. Raw answers and mood vectors are not saved in history. Losing the browser cookie loses access; export/delete controls are in History. The old terminal harness/JSON analytics remain legacy local tools and are not used by the web API or shipped in the runtime image.

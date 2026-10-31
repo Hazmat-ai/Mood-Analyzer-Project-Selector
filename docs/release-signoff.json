@@ -1,0 +1,32 @@
+{
+  "uat": {
+    "approved": false,
+    "reviewer": null,
+    "date": null,
+    "evidence": null
+  },
+  "securityReview": {
+    "approved": false,
+    "reviewer": null,
+    "date": null,
+    "evidence": null
+  },
+  "deploymentSmoke": {
+    "approved": false,
+    "reviewer": null,
+    "date": null,
+    "evidence": null
+  },
+  "restoreDrill": {
+    "approved": false,
+    "reviewer": null,
+    "date": null,
+    "evidence": null
+  },
+  "contentReview": {
+    "approved": false,
+    "reviewer": null,
+    "date": null,
+    "evidence": null
+  }
+}

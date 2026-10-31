@@ -45,4 +45,4 @@ def describe_match_reason(user_mood, project):
         "challenge": "how much of a challenge you're up for",
     }
 
-    return f"This matched well with {axis_phrases.get(closest_axis, closest_axis)} today."
+    return f"Of the three preference axes, this project is closest to {axis_phrases.get(closest_axis, closest_axis)}. Its overall vector distance is {score_project(user_mood, project):.2f}."
